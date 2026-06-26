@@ -249,10 +249,13 @@ Total response: 120 words maximum.`;
 
     try {
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          contentType: 'application/json',
+			headers: {
+			  'x-goog-api-key': API_KEY,
+			},
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: { temperature: 0.7, maxOutputTokens: 300 }
