@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reflection</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #0f1b2d;
+    color: #f0f4f8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 640px;
+  }
+
+  .prompt-box {
+    background: #1a2f4a;
+    border-left: 4px solid #4a9eff;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #c8d8e8;
+  }
+
+  .prompt-box strong {
+    display: block;
+    color: #4a9eff;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+
+  textarea {
+    width: 100%;
+    height: 140px;
+    background: #1a2f4a;
+    border: 1px solid #2a4a6a;
+    border-radius: 8px;
+    color: #f0f4f8;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 14px;
+    resize: none;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  textarea:focus {
+    border-color: #4a9eff;
+  }
+
+  textarea::placeholder {
+    color: #4a6a8a;
+  }
+
+  .char-count {
+    text-align: right;
+    font-size: 11px;
+    color: #4a6a8a;
+    margin-top: 6px;
+    margin-bottom: 16px;
+  }
+
+  button {
+    width: 100%;
+    padding: 14px;
+    background: #4a9eff;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, opacity 0.2s;
+  }
+
+  button:hover { background: #3a8eef; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .feedback-box {
+    margin-top: 24px;
+    background: #0d2137;
+    border: 1px solid #2a4a6a;
+    border-radius: 8px;
+    padding: 20px;
+    display: none;
+    animation: fadeIn 0.4s ease;
+  }
+
+  .feedback-box.visible { display: block; }
+
+  .feedback-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #4a9eff;
+    margin-bottom: 12px;
+    font-weight: 700;
+  }
+
+  .feedback-text {
+    font-size: 14px;
+    line-height: 1.75;
+    color: #c8d8e8;
+    white-space: pre-wrap;
+  }
+
+  .loading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #4a6a8a;
+    font-size: 13px;
+  }
+
+  .dot {
+    width: 8px; height: 8px;
+    background: #4a9eff;
+    border-radius: 50%;
+    animation: pulse 1.2s infinite;
+  }
+
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes pulse {
+    0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+    40% { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ============================================================
+       CUSTOMISE: Change the scenario prompt below to match your course
+       ============================================================ -->
+  <div class="prompt-box">
+    <strong>Reflect on this</strong>
+    A student in your class is disengaged — head down, not participating,
+    missing deadlines. How would you approach this situation, and what
+    specific steps would you take?
+  </div>
+
+  <textarea
+    id="responseInput"
+    placeholder="Type your response here — be as specific as you can..."
+    oninput="updateCount()"
+  ></textarea>
+
+  <div class="char-count">
+    <span id="charCount">0</span> characters
+    <!-- Minimum character count is set in the script below (MIN_CHARS) -->
+  </div>
+
+  <button id="submitBtn" onclick="getAIFeedback()" disabled>
+    Get Feedback
+  </button>
+
+  <div class="feedback-box" id="feedbackBox">
+    <div class="feedback-label">AI Coach Feedback</div>
+    <div class="feedback-text" id="feedbackText"></div>
+  </div>
+
+</div>
+
+<script>
+  // ============================================================
+  // STEP 1: Replace the value below with your Gemini API key
+  // Get a free key at: aistudio.google.com
+  // ============================================================
+  const API_KEY = "AQ.Ab8RN6LJ7tZjPeBDW4diaqP8woJYGj0n7zRl05s1xv0smVoMUQ";
+
+  // ============================================================
+  // CUSTOMISE: Minimum characters before Submit button activates
+  // Increase this number to require more thoughtful responses
+  // ============================================================
+  const MIN_CHARS = 40;
+
+  function updateCount() {
+    const input = document.getElementById("responseInput");
+    const count = input.value.length;
+    document.getElementById("charCount").textContent = count;
+    document.getElementById("submitBtn").disabled = count < MIN_CHARS;
+  }
+
+  async function getAIFeedback() {
+    const response = document.getElementById("responseInput").value.trim();
+    const btn = document.getElementById("submitBtn");
+    const feedbackBox = document.getElementById("feedbackBox");
+    const feedbackText = document.getElementById("feedbackText");
+
+    btn.disabled = true;
+    feedbackBox.classList.add("visible");
+    feedbackText.innerHTML = `
+      <div class="loading">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <span>Analysing your response...</span>
+      </div>`;
+
+    // ============================================================
+    // CUSTOMISE: Edit the prompt below to match your course context
+    // - Change the role ("teacher" -> your learner role)
+    // - Change the scenario question to match your prompt box above
+    // - Adjust the three feedback sections as needed
+    // - Keep "120 words maximum" or adjust to your preference
+    // ============================================================
+    const prompt = `
+You are a warm, experienced instructional coach reviewing a teacher's written reflection.
+
+The teacher was asked: "A student in your class is disengaged — head down, not participating, missing deadlines. How would you approach this situation, and what specific steps would you take?"
+
+Their response was: "${response}"
+
+Give feedback in exactly this structure — use plain text, no markdown symbols:
+
+WHAT WORKS
+Write 2-3 sentences on genuine strengths in their response. Be specific, not generic.
+
+DEEPEN YOUR THINKING
+Write 2-3 sentences pushing them to think further. Pose a question or surface something they may not have considered.
+
+ONE THING TO TRY
+Give one concrete, immediately actionable technique they could use tomorrow.
+
+Keep the tone warm, direct, and collegial — like a trusted colleague, not an evaluator.
+Total response: 120 words maximum.`;
+
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.7, maxOutputTokens: 300 }
+          })
+        }
+      );
+
+      const data = await res.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (text) {
+        feedbackText.textContent = text;
+      } else {
+        feedbackText.textContent = "Something went wrong. Please try again.";
+      }
+
+    } catch (err) {
+      feedbackText.textContent = "Could not connect. Please check your internet connection and try again.";
+    }
+
+    btn.disabled = false;
+  }
+</script>
+</body>
+</html>
